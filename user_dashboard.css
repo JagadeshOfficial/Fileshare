@@ -712,9 +712,6 @@ body, html {
 }
 
 
-
-
-
 .recent-activity {
   margin-top: 20px;
   padding: 15px;
@@ -742,13 +739,6 @@ body, html {
   color: #666;
   font-size: 12px;
 }
-
-
-
-
-
-
-
 .profile-wrapper {
   display: flex;
   margin-bottom: 10px;

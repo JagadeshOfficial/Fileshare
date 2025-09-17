@@ -312,7 +312,7 @@ $conn->close();
 
         .form-group input,
         .form-group textarea {
-            width: 100%;
+            width: 350px;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -330,6 +330,53 @@ $conn->close();
         .btn-group button:hover {
             background: #0056b3;
         }
+
+        /* Default: Sidebar visible */
+        .sidebar {
+            width: 371px;
+            background-color: #2d2d2d;
+            color: white;
+        }
+
+        .nav {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Hide toggle button on large screens */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+        }
+
+        /* Responsive - for tablets and mobiles */
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+
+            #upload {
+                width: 270px;
+            }
+
+            .nav {
+                display: none;
+                flex-direction: column;
+                background-color: #2d2d2d;
+            }
+
+            .nav.show {
+                display: flex;
+            }
+
+            .main {
+                width: 366px;
+            }
+        }
     </style>
 </head>
 
@@ -345,8 +392,10 @@ $conn->close();
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>FileShare</h2>
+                <!-- Toggle Button (Visible only on mobile/tablet) -->
+                <button id="menu-toggle" class="menu-toggle">☰</button>
             </div>
-            <nav class="nav">
+            <nav class="nav" id="mobileMenu">
                 <a href="#" class="nav-link active" data-section="dashboard">Dashboard</a>
                 <a href="#" class="nav-link" data-section="documents">Documents</a>
                 <a href="#" class="nav-link" data-section="downloads">My Downloads</a>
@@ -355,10 +404,11 @@ $conn->close();
             </nav>
         </aside>
 
+
         <main class="main">
             <div class="header">
                 <div class="header-left">
-                <h1>Welcome, <span id="userName"><?php echo htmlspecialchars($user['name'] ?? ''); ?></span></h1>
+                    <h1>Welcome, <span id="userName"><?php echo htmlspecialchars($user['name'] ?? ''); ?></span></h1>
                     <p>Email: <span id="userEmail"><?php echo htmlspecialchars($user['email']); ?></span></p>
                 </div>
                 <div class="header-right"></div>
@@ -471,10 +521,19 @@ $conn->close();
             </div>
         </main>
     </div>
+    <script>
+        const toggleBtn = document.getElementById('menu-toggle');
+        const navMenu = document.getElementById('mobileMenu');
+
+        toggleBtn.addEventListener('click', () => {
+            navMenu.classList.toggle('show');
+        });
+    </script>
 
 
 
     <script>
+
         document.addEventListener('DOMContentLoaded', () => {
             const userId = window.currentUserId;
             const searchInput = document.getElementById('searchInput');
@@ -526,16 +585,16 @@ $conn->close();
                     const docBox = document.createElement('div');
                     docBox.className = 'document-box';
                     docBox.innerHTML = `
-                        <div class="document-header">
-                            <img src="${iconSrc}" alt="${fileExtension.toUpperCase()}" class="download-icon" />
-                            <span class="file-name">${sanitizeHTML(doc.file_name)}</span>
-                        </div>
-                        <div class="document-details">
-                            <p>Uploaded on: <span>${new Date(doc.uploaded_at).toLocaleDateString()}</span></p>
-                            <p>Assigned by: <span>${sanitizeHTML(doc.admin_name)}</span></p>
-                            <a href="#" class="download-btn" data-doc-id="${doc.id}">Download</a>
-                        </div>
-                    `;
+                <div class="document-header">
+                    <img src="${iconSrc}" alt="${fileExtension.toUpperCase()}" class="download-icon" />
+                    <span class="file-name">${sanitizeHTML(doc.file_name)}</span>
+                </div>
+                <div class="document-details">
+                    <p>Uploaded on: <span>${new Date(doc.uploaded_at).toLocaleDateString()}</span></p>
+                    <p>Assigned by: <span>${sanitizeHTML(doc.admin_name)}</span></p>
+                    <a href="#" class="download-btn" data-doc-id="${doc.id}">Download</a>
+                </div>
+            `;
                     documentsContainer.appendChild(docBox);
                 });
                 attachDownloadListeners();
@@ -586,12 +645,12 @@ $conn->close();
                         const item = document.createElement('div');
                         item.className = 'download-item';
                         item.innerHTML = `
-                            <div class="download-info">
-                                <p class="file-name">${sanitizeHTML(download.file_name)}</p>
-                                <p class="download-date">Downloaded on: ${new Date(download.created_at).toLocaleDateString()}</p>
-                            </div>
-                            <a href="#" class="download-btn" data-file-name="${sanitizeHTML(download.file_name)}">Download Again</a>
-                        `;
+                    <div class="download-info">
+                        <p class="file-name">${sanitizeHTML(download.file_name)}</p>
+                        <p class="download-date">Downloaded on: ${new Date(download.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <a href="#" class="download-btn" data-file-name="${sanitizeHTML(download.file_name)}">Download Again</a>
+                `;
                         downloadsContainer.appendChild(item);
                     });
                     attachDownloadListeners();
@@ -613,46 +672,41 @@ $conn->close();
                 const btn = e.target;
                 const docId = btn.dataset.docId;
                 const fileName = btn.dataset.fileName;
+                console.log('Download clicked', { docId, fileName }); // Debug log
                 try {
+                    let response;
                     if (docId) {
-                        const response = await fetch(`api.php?action=download_document&docId=${docId}`);
-                        if (!response.ok) {
-                            const text = await response.text();
-                            throw new Error(`Failed to download: ${text}`);
-                        }
-                        const data = await response.json();
+                        response = await fetch(`api.php?action=download_document&docId=${docId}`);
+                    } else if (fileName) {
+                        const docsResponse = await fetch(`api.php?action=get_assigned_documents&userId=${encodeURIComponent(userId)}`);
+                        if (!docsResponse.ok) throw new Error('Failed to fetch documents');
+                        const documents = await docsResponse.json();
+                        const doc = documents.find(d => d.file_name === fileName);
+                        if (!doc) throw new Error('Document not found');
+                        response = await fetch(`api.php?action=download_document&docId=${doc.id}`);
+                    }
+                    if (!response.ok) {
+                        const text = await response.text();
+                        throw new Error(`HTTP Error: ${response.status} - ${text}`);
+                    }
+                    const data = await response.json();
+                    console.log('API Response:', data); // Debug log
+                    if (data.success) {
                         const link = document.createElement('a');
-                        link.href = sanitizeURL(data.file_path);
+                        link.href = window.location.origin + '/' + data.file_path; // Ensure full URL
                         link.download = data.file_name;
+                        document.body.appendChild(link);
                         link.click();
+                        document.body.removeChild(link);
                         loadRecentActivities();
                         if (document.getElementById('downloads').style.display === 'block') {
                             loadDownloads();
                         }
-                    } else if (fileName) {
-                        const response = await fetch(`api.php?action=get_assigned_documents&userId=${encodeURIComponent(userId)}`);
-                        if (!response.ok) {
-                            const text = await response.text();
-                            throw new Error(`Failed to fetch documents: ${text}`);
-                        }
-                        const documents = await response.json();
-                        const doc = documents.find(d => d.file_name === fileName);
-                        if (!doc) throw new Error('Document not found');
-                        const downloadResponse = await fetch(`api.php?action=download_document&docId=${doc.id}`);
-                        if (!downloadResponse.ok) {
-                            const text = await downloadResponse.text();
-                            throw new Error(`Failed to download: ${text}`);
-                        }
-                        const data = await downloadResponse.json();
-                        const link = document.createElement('a');
-                        link.href = sanitizeURL(data.file_path);
-                        link.download = data.file_name;
-                        link.click();
-                        loadRecentActivities();
-                        loadDownloads();
+                    } else {
+                        throw new Error(data.error || 'Download failed');
                     }
                 } catch (error) {
-                    console.error('Error handling download:', error);
+                    console.error('Download Error:', error);
                     alert(`Error: ${error.message}`);
                 }
             }

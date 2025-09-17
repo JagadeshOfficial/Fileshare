@@ -14,6 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = password_hash($_POST["password"], PASSWORD_DEFAULT);
     $otp      = rand(100000, 999999);
 
+    // Store data in session temporarily until OTP is verified
     $_SESSION['registration_data'] = [
         'name' => $name,
         'email' => $email,
@@ -26,16 +27,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $mail = new PHPMailer(true);
 
     try {
+        // Server settings
         $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
-        $mail->SMTPAuth = true;
-        $mail->Username = 'jagadeswararaovana@gmail.com';
-        $mail->Password = 'ttimmgumtntdwokt'; // App password
-        $mail->SMTPSecure = 'tls';
-        $mail->Port = 587;
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'jagadeswararaovana@gmail.com'; // your Gmail
+        $mail->Password   = 'jwjwjqhzrukymdkc'; // App Password (NOT your Gmail password!)
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // use SSL
+        $mail->Port       = 465;
 
+        // For debugging (comment in production)
+        // $mail->SMTPDebug = 2;
+        // $mail->Debugoutput = 'html';
+
+        // Recipients
         $mail->setFrom('jagadeswararaovana@gmail.com', 'Registration System');
-        $mail->addAddress($email);
+        $mail->addAddress($email, $name);
+
+        // Content
+        $mail->isHTML(false);
         $mail->Subject = "Your OTP Code";
         $mail->Body    = "Dear $name,\n\nYour OTP code is: $otp\n\nThank you!";
 

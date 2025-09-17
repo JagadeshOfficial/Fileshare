@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $mail->SMTPSecure = 'tls';
             $mail->Port = 587;
 
-            $mail->setFrom('jagadeswararaovana@gmail.com', 'Havenist');
+            $mail->setFrom('jagadeswararaovana@gmail.com', 'FilesharePro');
             $mail->addAddress($email);
             $mail->Subject = $subject;
             $mail->Body = $message;

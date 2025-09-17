@@ -1,50 +1,25 @@
 <?php
-header('Content-Type: application/json'); // Set the response type to JSON
+include('db.php');
 
-// Function to send a JSON response
-function sendResponse($status, $message) {
-    echo json_encode(['status' => $status, 'message' => $message]);
-    exit;
-}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $fileId = isset($data['id']) ? intval($data['id']) : null;
 
-// Check if the request method is POST
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    sendResponse('error', 'Invalid request method. Use POST.');
-}
-
-// Get the raw POST data and decode it
-$input = file_get_contents('php://input');
-$data = json_decode($input, true);
-
-// Check if the 'id' parameter is provided
-if (!isset($data['id']) || empty($data['id'])) {
-    sendResponse('error', 'File ID is required.');
-}
-
-$fileId = $data['id'];
-
-// Example: Assuming you're deleting a file from the file system
-// Replace this with your actual logic (e.g., database query or file system operation)
-$filePath = "path/to/your/files/" . $fileId; // Adjust this path to where your files are stored
-
-if (file_exists($filePath)) {
-    if (unlink($filePath)) {
-        // Optionally, delete the file record from a database (example with PDO)
-        /*
-        try {
-            $pdo = new PDO("mysql:host=localhost;dbname=your_db", "username", "password");
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $stmt = $pdo->prepare("DELETE FROM files WHERE id = ?");
-            $stmt->execute([$fileId]);
-        } catch (PDOException $e) {
-            sendResponse('error', 'Database error: ' . $e->getMessage());
+    if ($fileId) {
+        $stmt = $conn->prepare("UPDATE files SET is_deleted = 1 WHERE id = ?");
+        $stmt->bind_param("i", $fileId);
+        if ($stmt->execute()) {
+            echo json_encode(['status' => 'success', 'message' => 'File marked as deleted.']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Failed to delete file: ' . $conn->error]);
         }
-        */
-        sendResponse('success', 'File deleted successfully');
+        $stmt->close();
     } else {
-        sendResponse('error', 'Failed to delete the file from the server.');
+        echo json_encode(['status' => 'error', 'message' => 'Invalid file ID.']);
     }
 } else {
-    sendResponse('error', 'File not found.');
+    echo json_encode(['status' => 'error', 'message' => 'Invalid request method.']);
 }
+
+$conn->close();
 ?>

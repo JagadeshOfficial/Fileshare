@@ -1,8 +1,8 @@
 <?php
 $host = "localhost";
 $user = "root"; // your DB username
-$pass = "Sivani@123";     // your DB password  ttimmgumtntdwokt
-$dbname = "fileshare"; // your DB name
+$pass = "Sivani@123";     // #_ZIEmf42(^k your DB password 
+$dbname = "fileshare"; // judicial_newdbfile your DB name       jwjwjqhzrukymdkc
 
 $conn = new mysqli($host, $user, $pass, $dbname);
 

@@ -28,7 +28,7 @@ header .container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0rem;
+  padding: 10px;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -266,7 +266,7 @@ header nav a:hover {
   /* Responsive Button Styling for Small Screens */
   @media (max-width: 768px) {
     .btn-outline, .btn {
-      width: 100%; /* Make buttons full width on smaller screens */
+      width: 80%; /* Make buttons full width on smaller screens */
       padding: 14px 28px;
       font-size: 18px; /* Increase font size on smaller screens */
     }

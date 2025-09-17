@@ -834,7 +834,7 @@
   text-align: center;
   font-size: 28px;
   margin-bottom: 30px;
-  color: #333;
+  color: white;
 }
 
 .profile-card {
@@ -902,13 +902,6 @@
     margin-top: 20px;
   }
 }
-
-
-
-
-
-
-
 .profile-image {
   width: 120px;
   height: 120px;
@@ -982,7 +975,6 @@
 label {
   display: block;
   margin-bottom: 5px;
-  color: #34495e;
 }
 
 select {
@@ -1047,11 +1039,6 @@ button:hover {
   background: #e74c3c;
   color: white;
 }
-
-
-
-
-
 .notification {
   padding: 10px;
   margin: 10px 0;
@@ -1114,14 +1101,6 @@ button:hover {
 .document-list li {
   padding: 5px 0;
 }
-
-
-
-
-
-
-
-
 
 .document-list {
     max-width: 800px;
@@ -1226,13 +1205,6 @@ button:hover {
     background-color: #f8d7da;
     color: #721c24;
 }
-
-
-
-
-
-
-
 .modal {
   display: none;
   position: fixed;

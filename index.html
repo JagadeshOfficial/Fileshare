@@ -29,6 +29,21 @@
       color: #333;
     }
 
+     .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background-color: #f9f9f9;
+      position: relative;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      text-decoration: none;
+      color: #333;
+    }
+
     nav {
       display: flex;
       align-items: center;
@@ -43,9 +58,79 @@
 
     .dropdown {
       position: relative;
-      display: inline-block;
     }
 
+    .dropbtn {
+      background: none;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: #fff;
+      min-width: 160px;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+      z-index: 1;
+    }
+
+    .dropdown-content a {
+      display: block;
+      padding: 10px;
+      text-decoration: none;
+      color: #333;
+    }
+
+    .dropdown-content a:hover {
+      background-color: #f1f1f1;
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      cursor: pointer;
+    }
+
+    .hamburger span {
+      height: 3px;
+      width: 25px;
+      background: #333;
+      margin: 4px 0;
+    }
+
+    @media (max-width: 768px) {
+      nav {
+        flex-direction: column;
+        gap: 10px;
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        background: #fff;
+        border: 1px solid #ccc;
+        padding: 10px;
+        display: none;
+        width: 200px;
+      }
+
+      nav.show {
+        display: flex;
+      }
+
+      .dropdown-content {
+        position: static;
+        box-shadow: none;
+      }
+
+      .hamburger {
+        display: flex;
+      }
+    }
     .dropbtn {
       background-color: #333;
       color: white;
@@ -154,21 +239,34 @@
   <!-- Header -->
   <header>
     <div class="container">
-      <h1><a href="index.html" class="logo">FileSharePro</a></h1>
-      <nav>
-        <a href="#features">Features</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#" id="contact-link">Contact</a>
-        <div class="dropdown">
-          <button class="dropbtn">Login</button>
-          <div class="dropdown-content">
-            <a href="login.html">User Login</a>
-            <a href="Admin_login.html">Admin Login</a>
-          </div>
-        </div>
-        <a href="register.html">Sign Up</a>
-      </nav>
+    <h1><a href="index.html" class="logo">FileSharePro</a></h1>
+    
+    <div class="hamburger" onclick="toggleNav()">
+      <span></span>
+      <span></span>
+      <span></span>
     </div>
+
+    <nav id="navbar">
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#" id="contact-link">Contact</a>
+      <div class="dropdown">
+        <button class="dropbtn">Login</button>
+        <div class="dropdown-content">
+          <a href="login.html">User Login</a>
+          <a href="Admin_login.html">Admin Login</a>
+        </div>
+      </div>
+      <a href="register.html">Sign Up</a>
+    </nav>
+  </div>
+
+  <script>
+    function toggleNav() {
+      document.getElementById("navbar").classList.toggle("show");
+    }
+  </script>
   </header>
 
   <!-- Hero Section -->

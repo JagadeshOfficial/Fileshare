@@ -128,7 +128,7 @@ header .container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0rem;
+  padding: 10px;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -229,3 +229,64 @@ header nav a:hover {
   .dropdown:hover .dropbtn {
     background-color: #3e8e41;
   }
+  /* Hamburger Menu */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.hamburger span {
+  height: 3px;
+  width: 25px;
+  background: #333;
+  margin: 4px 0;
+  transition: 0.4s;
+}
+
+/* Responsive Nav */
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+
+  nav#nav-menu {
+    display: none;
+    flex-direction: column;
+    background: #ffffff;
+    position: absolute;
+    top: 70px;
+    right: 20px;
+    border: 1px solid #ccc;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+  }
+
+  nav#nav-menu.show {
+    display: flex;
+  }
+
+  nav#nav-menu a,
+  nav#nav-menu .dropbtn {
+    margin: 10px 0;
+    text-align: left;
+    padding: 10px 15px;
+    border-radius: 5px;
+  }
+
+  .dropdown-content {
+    position: static;
+    box-shadow: none;
+    background: transparent;
+    padding-left: 15px;
+  }
+
+  .dropdown-content a {
+    padding: 8px 0;
+  }
+
+  .dropdown:hover .dropdown-content {
+    display: block;
+  }
+}
