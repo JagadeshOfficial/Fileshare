@@ -67,11 +67,13 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - File System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="user_dashboard.css">
     <style>
         .container {
             display: flex;
             min-height: 100vh;
+            height: auto;
         }
 
         .sidebar {
@@ -152,40 +154,120 @@ $conn->close();
             color: #007bff;
         }
 
-        .recent-activity {
+        .activity-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .activity-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .filter-select,
+        .search-bar {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .activity-timeline {
+            position: relative;
+            padding: 0 0 20px 40px;
+            margin: 0;
+        }
+
+        .activity-timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #007bff, #0056b3);
+            border-radius: 1px;
+        }
+
+        .activity-item {
+            position: relative;
+            margin-bottom: 15px;
+            padding: 15px;
             background: white;
+            border-left: 4px solid #007bff;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .activity-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 20px;
+            width: 10px;
+            height: 10px;
+            background: #007bff;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px #f5f5f5;
+        }
+
+        .activity-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            vertical-align: middle;
+            border-radius: 50%;
+            background: #e9ecef;
+            padding: 2px;
+        }
+
+        .activity-details {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .timestamp {
+            float: right;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .activity-chart {
+            margin-top: 30px;
             padding: 20px;
+            background: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        .recent-activity h3 {
-            font-size: 18px;
-            margin: 0 0 10px;
+        #activityChart {
+            max-width: 100%;
+            height: 200px;
         }
 
-        .recent-activity ul {
-            list-style: none;
-            padding: 0;
+        /* Icon colors based on action */
+        .downloaded .activity-icon {
+            background: #28a745;
         }
 
-        .recent-activity li {
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
+        .uploaded .activity-icon {
+            background: #007bff;
         }
 
-        .recent-activity li:last-child {
-            border-bottom: none;
-        }
-
-        .recent-activity .timestamp {
-            float: right;
-            color: #666;
-            font-size: 12px;
-        }
-
-        .recent-activity .error {
-            color: #d9534f;
+        .deleted .activity-icon {
+            background: #dc3545;
         }
 
         .documents-section {
@@ -273,6 +355,7 @@ $conn->close();
 
         .downloads-container {
             display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 15px;
         }
 
@@ -433,9 +516,26 @@ $conn->close();
                     </div>
                     <div class="recent-activity">
                         <h3>Recent Activity</h3>
-                        <ul id="activityList">
-                            <li>Loading activities...</li>
-                        </ul>
+                        <div class="activity-controls">
+                            <select id="activityFilter" class="filter-select">
+                                <option value="all">All Activities</option>
+                                <option value="Uploaded">Uploads</option>
+                                <option value="Downloaded">Downloads</option>
+                                <option value="Deleted">Deleted</option>
+                            </select>
+                            <input type="text" id="activitySearch" placeholder="Search activities..." class="search-bar"
+                                style="width: 200px;" />
+                        </div>
+                        <div class="activity-timeline" id="activityTimeline">
+                            <p class="loading">Loading activities...</p>
+                        </div>
+                        <button id="loadMoreActivities"
+                            style="display: none; margin: 20px auto; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Load
+                            More</button>
+                        <div class="activity-chart">
+                            <h3>Activity Trends (Last 7 Days)</h3>
+                            <canvas id="activityChart" width="400" height="200"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -532,19 +632,22 @@ $conn->close();
 
 
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-
         document.addEventListener('DOMContentLoaded', () => {
             const userId = window.currentUserId;
             const searchInput = document.getElementById('searchInput');
             const documentsContainer = document.getElementById('documentsContainer');
             const downloadsContainer = document.getElementById('downloadsContainer');
-            const activityList = document.getElementById('activityList');
+            const activityTimeline = document.getElementById('activityTimeline');
             let allDocuments = [];
+            let allActivities = [];
+            let displayedActivities = 0;
+            const activitiesPerPage = 5;
 
             if (!userId) {
                 documentsContainer.innerHTML = '<p class="error">Please log in to view documents</p>';
-                activityList.innerHTML = '<li class="error">Please log in to view activities</li>';
+                activityTimeline.innerHTML = '<p class="error">Please log in to view activities</p>';
                 downloadsContainer.innerHTML = '<p class="error">Please log in to view downloads</p>';
                 return;
             }
@@ -575,56 +678,122 @@ $conn->close();
                 documents.forEach(doc => {
                     const fileExtension = doc.file_name.split('.').pop().toLowerCase();
                     const iconMap = {
-                        pdf: 'icons/pdf-icon.png',
-                        doc: 'icons/docx-icon.png',
-                        docx: 'icons/docx-icon.png',
-                        txt: 'icons/txt-icon.png',
-                        default: 'icons/file-icon.png'
+                        pdf: 'https://www.svgrepo.com/download/452084/pdf.svg',  // Free PDF SVG from SVG Repo
+                        doc: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/.docx_icon.svg',  // Free DOCX SVG from Wikimedia
+                        docx: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/.docx_icon.svg',  // Free DOCX SVG from Wikimedia
+                        txt: 'https://www.svgrepo.com/download/149905/txt-file-symbol.svg',  // Free TXT SVG from SVG Repo
+                        default: 'https://upload.wikimedia.org/wikipedia/commons/8/8b/File_icon.svg'  // Free generic file SVG from Wikimedia
                     };
                     const iconSrc = iconMap[fileExtension] || iconMap.default;
                     const docBox = document.createElement('div');
                     docBox.className = 'document-box';
                     docBox.innerHTML = `
-                <div class="document-header">
-                    <img src="${iconSrc}" alt="${fileExtension.toUpperCase()}" class="download-icon" />
-                    <span class="file-name">${sanitizeHTML(doc.file_name)}</span>
-                </div>
-                <div class="document-details">
-                    <p>Uploaded on: <span>${new Date(doc.uploaded_at).toLocaleDateString()}</span></p>
-                    <p>Assigned by: <span>${sanitizeHTML(doc.admin_name)}</span></p>
-                    <a href="#" class="download-btn" data-doc-id="${doc.id}">Download</a>
-                </div>
-            `;
+                    <div class="document-header">
+                        <img src="${iconSrc}" alt="${fileExtension.toUpperCase()}" class="download-icon" />
+                        <span class="file-name">${sanitizeHTML(doc.file_name)}</span>
+                    </div>
+                    <div class="document-details">
+                        <p>Uploaded on: <span>${new Date(doc.uploaded_at).toLocaleDateString()}</span></p>
+                        <p>Assigned by: <span>${sanitizeHTML(doc.admin_name)}</span></p>
+                        <a href="#" class="download-btn" data-doc-id="${doc.id}">Download</a>
+                    </div>
+                `;
                     documentsContainer.appendChild(docBox);
                 });
                 attachDownloadListeners();
             }
 
             async function loadRecentActivities() {
-                if (!activityList) return;
-                activityList.innerHTML = '<li>Loading activities...</li>';
+                if (!activityTimeline) return;
+                // Clear existing activities to start fresh
+                allActivities = [];
+                displayedActivities = 0;
+                activityTimeline.innerHTML = '<p class="loading">Loading activities...</p>';
                 try {
                     const response = await fetch(`api.php?action=get_recent_activities&userId=${encodeURIComponent(userId)}`);
                     if (!response.ok) {
                         const text = await response.text();
                         throw new Error(`Failed to load activities: ${text}`);
                     }
-                    const activities = await response.json();
-                    activityList.innerHTML = '';
-                    if (activities.length === 0) {
-                        activityList.innerHTML = '<li>No recent activities</li>';
-                        return;
-                    }
-                    activities.forEach(activity => {
-                        const li = document.createElement('li');
-                        const timeAgo = getTimeAgo(new Date(activity.created_at));
-                        li.innerHTML = `<strong>${sanitizeHTML(activity.action)}:</strong> ${sanitizeHTML(activity.file_name)} <span class="timestamp">${timeAgo}</span>`;
-                        activityList.appendChild(li);
-                    });
+                    allActivities = await response.json();
+                    const initialActivities = allActivities.slice(0, activitiesPerPage);
+                    renderActivities(initialActivities);
+                    document.getElementById('loadMoreActivities').style.display = allActivities.length > activitiesPerPage ? 'block' : 'none';
+                    renderActivityChart(allActivities);
                 } catch (error) {
                     console.error('Error loading activities:', error);
-                    activityList.innerHTML = `<li class="error">Error loading activities: ${error.message}</li>`;
+                    activityTimeline.innerHTML = `<p class="error">Error loading activities: ${error.message}</p>`;
                 }
+            }
+
+            function renderActivities(activities) {
+                if (!activityTimeline) return;
+                activityTimeline.innerHTML = '';
+                if (activities.length === 0) {
+                    activityTimeline.innerHTML = '<p>No recent activities</p>';
+                    return;
+                }
+                activities.forEach(activity => {
+                    const iconMap = {
+                        Uploaded: 'https://www.svgrepo.com/download/52077/upload.svg',  // Free upload SVG from SVG Repo
+                        Downloaded: 'https://www.svgrepo.com/download/43423/download.svg',  // Free download SVG from SVG Repo
+                        Deleted: 'https://www.svgrepo.com/download/361317/trash.svg',  // Free trash SVG from SVG Repo
+                        default: 'https://upload.wikimedia.org/wikipedia/commons/8/8b/File_icon.svg'  // Free generic file SVG from Wikimedia
+                    };
+                    const iconSrc = iconMap[activity.action] || iconMap.default;
+                    const timeAgo = getTimeAgo(new Date(activity.created_at));
+                    const activityItem = document.createElement('div');
+                    activityItem.className = 'activity-item';
+                    activityItem.innerHTML = `
+                    
+                    <strong>${sanitizeHTML(activity.action)}:</strong> ${sanitizeHTML(activity.file_name)}
+                    <div class="activity-details">
+                        <p>By: ${sanitizeHTML(activity.admin_name || 'You')}</p>
+                        <p class="timestamp">${timeAgo}</p>
+                    </div>
+                `;
+                    activityTimeline.appendChild(activityItem);
+                });
+                displayedActivities = activities.length;
+            }
+
+            document.getElementById('loadMoreActivities').addEventListener('click', () => {
+                const nextActivities = allActivities.slice(displayedActivities, displayedActivities + activitiesPerPage);
+                if (nextActivities.length > 0) {
+                    const currentActivities = allActivities.slice(0, displayedActivities + nextActivities.length);
+                    renderActivities(currentActivities);
+                    document.getElementById('loadMoreActivities').style.display = allActivities.length > (displayedActivities + nextActivities.length) ? 'block' : 'none';
+                }
+            });
+
+            document.getElementById('activityFilter').addEventListener('change', () => {
+                const filter = document.getElementById('activityFilter').value;
+                const query = document.getElementById('activitySearch').value.toLowerCase().trim();
+                filterActivities(filter, query);
+            });
+
+            document.getElementById('activitySearch').addEventListener('input', () => {
+                const filter = document.getElementById('activityFilter').value;
+                const query = document.getElementById('activitySearch').value.toLowerCase().trim();
+                filterActivities(filter, query);
+            });
+
+            function filterActivities(filter, query) {
+                let filteredActivities = allActivities;
+                if (filter !== 'all') {
+                    filteredActivities = allActivities.filter(activity => activity.action === filter);
+                }
+                if (query) {
+                    filteredActivities = filteredActivities.filter(activity =>
+                        activity.file_name.toLowerCase().includes(query) ||
+                        (activity.admin_name && activity.admin_name.toLowerCase().includes(query))
+                    );
+                }
+                displayedActivities = 0;
+                const initialFiltered = filteredActivities.slice(0, activitiesPerPage);
+                renderActivities(initialFiltered);
+                document.getElementById('loadMoreActivities').style.display = filteredActivities.length > activitiesPerPage ? 'block' : 'none';
+                renderActivityChart(filteredActivities);
             }
 
             async function loadDownloads() {
@@ -645,12 +814,12 @@ $conn->close();
                         const item = document.createElement('div');
                         item.className = 'download-item';
                         item.innerHTML = `
-                    <div class="download-info">
-                        <p class="file-name">${sanitizeHTML(download.file_name)}</p>
-                        <p class="download-date">Downloaded on: ${new Date(download.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <a href="#" class="download-btn" data-file-name="${sanitizeHTML(download.file_name)}">Download Again</a>
-                `;
+                        <div class="download-info">
+                            <p class="file-name">${sanitizeHTML(download.file_name)}</p>
+                            <p class="download-date">Downloaded on: ${new Date(download.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <a href="#" class="download-btn" data-file-name="${sanitizeHTML(download.file_name)}">Download Again</a>
+                    `;
                         downloadsContainer.appendChild(item);
                     });
                     attachDownloadListeners();
@@ -672,7 +841,7 @@ $conn->close();
                 const btn = e.target;
                 const docId = btn.dataset.docId;
                 const fileName = btn.dataset.fileName;
-                console.log('Download clicked', { docId, fileName }); // Debug log
+                console.log('Download clicked', { docId, fileName });
                 try {
                     let response;
                     if (docId) {
@@ -690,10 +859,10 @@ $conn->close();
                         throw new Error(`HTTP Error: ${response.status} - ${text}`);
                     }
                     const data = await response.json();
-                    console.log('API Response:', data); // Debug log
+                    console.log('API Response:', data);
                     if (data.success) {
                         const link = document.createElement('a');
-                        link.href = window.location.origin + '/' + data.file_path; // Ensure full URL
+                        link.href = window.location.origin + '/' + data.file_path;
                         link.download = data.file_name;
                         document.body.appendChild(link);
                         link.click();
@@ -712,7 +881,7 @@ $conn->close();
             }
 
             function getTimeAgo(date) {
-                const now = new Date();
+                const now = new Date('2025-09-18T04:19:00Z'); // 09:49 AM IST = UTC+5:30 = 04:19 UTC
                 const diffMs = now - date;
                 const diffMins = Math.round(diffMs / 60000);
                 if (diffMins < 1) return 'just now';
@@ -774,6 +943,67 @@ $conn->close();
                     document.getElementById('profilePic').src = reader.result;
                 };
                 reader.readAsDataURL(event.target.files[0]);
+            }
+
+            // renderActivityChart function
+            function renderActivityChart(activities) {
+                const canvas = document.getElementById('activityChart');
+                if (!canvas) {
+                    console.error('Chart canvas not found');
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+
+                // Generate last 7 days labels (using current date: 2025-09-18 09:49 AM IST)
+                const today = new Date('2025-09-18T04:19:00Z'); // 09:49 AM IST
+                const last7Days = [];
+                const activityCounts = [];
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() - i);
+                    const dateStr = date.toISOString().split('T')[0];
+                    last7Days.push(dateStr);
+                    const count = activities.filter(activity => {
+                        const activityDate = new Date(activity.created_at).toISOString().split('T')[0];
+                        return activityDate === dateStr;
+                    }).length;
+                    activityCounts.push(count);
+                }
+
+                // Destroy existing chart if present
+                if (window.activityChartInstance) {
+                    window.activityChartInstance.destroy();
+                }
+
+                // Render new chart
+                window.activityChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: last7Days,
+                        datasets: [{
+                            label: 'Activity Count',
+                            data: activityCounts,
+                            backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Number of Activities' }
+                            },
+                            x: {
+                                title: { display: true, text: 'Date' }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: true, position: 'top' }
+                        }
+                    }
+                });
             }
 
             document.getElementById('dashboard').style.display = 'block';
